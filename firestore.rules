@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: proposals
+    // Fields:
+    //   - client_id: string (required) - ID of the creator
+    //   - type: string (required) - coleta or compra
+    //   - origin: string (required) - Origin address
+    //   - destination: string (required) - Destination address
+    //   - origin_coords: map (optional) - Lat/Lng
+    //   - destination_coords: map (optional) - Lat/Lng
+    //   - item_description: string (optional) - Description of items
+    //   - item_value: number (optional) - Estimated item value
+    //   - delivery_fee: number (required) - Delivery fee
+    //   - distance_km: number (optional) - Distance in km
+    //   - status: string (required) - waiting, accepted, in_transit, completed
+    //   - driver_name: string (optional) - Name of courier
+    //   - createdAt: timestamp (required) - Creation time
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.client_id;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    // Domain Validators
+    function isValidProposal(data) {
+      return data.client_id is string &&
+             data.type in ['coleta', 'compra'] &&
+             data.origin is string && data.origin.size() > 0 &&
+             data.destination is string && data.destination.size() > 0 &&
+             data.delivery_fee is number && data.delivery_fee >= 0 &&
+             data.status in ['waiting', 'accepted', 'in_transit', 'completed'] &&
+             (!('item_value' in data) || data.item_value is number) &&
+             (!('item_description' in data) || data.item_description is string);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /proposals/{proposalId} {
+      // Owner can read their own proposals
+      allow read: if isDocOwner();
+
+      // Only owner can create their own proposal
+      allow create: if isAuthenticated() &&
+                      isValidProposal(request.resource.data) &&
+                      request.resource.data.client_id == request.auth.uid &&
+                      hasRequiredFields(['client_id', 'type', 'origin', 'destination', 'delivery_fee', 'status', 'createdAt']);
+
+      // Only owner can update or delete their proposal
+      allow update: if isDocOwner() &&
+                      isValidProposal(request.resource.data) &&
+                      request.resource.data.client_id == resource.data.client_id;
+
+      allow delete: if isDocOwner();
+    }
+
+    // User profiles (if needed later)
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId);
+    }
+  }
+}

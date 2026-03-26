@@ -1,0 +1,31 @@
+{
+  "entities": {
+    "proposal": {
+      "title": "Proposta de Favor",
+      "description": "Uma proposta de favor criada pelo cliente",
+      "type": "object",
+      "properties": {
+        "client_id": { "type": "string", "description": "ID do usuário que criou" },
+        "type": { "type": "string", "enum": ["coleta", "compra"], "description": "Tipo de favor" },
+        "origin": { "type": "string", "description": "Endereço de origem" },
+        "destination": { "type": "string", "description": "Endereço de destino" },
+        "origin_coords": { "type": "object", "description": "Coordenadas de origem" },
+        "destination_coords": { "type": "object", "description": "Coordenadas de destino" },
+        "item_description": { "type": "string", "description": "Descrição do item" },
+        "item_value": { "type": "number", "description": "Valor do item" },
+        "delivery_fee": { "type": "number", "description": "Valor da entrega" },
+        "distance_km": { "type": "number", "description": "Distância calculada" },
+        "status": { "type": "string", "enum": ["waiting", "accepted", "in_transit", "completed"], "description": "Status do favor" },
+        "driver_name": { "type": "string", "description": "Nome do entregador" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Data de criação" }
+      },
+      "required": ["client_id", "type", "origin", "destination", "delivery_fee", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/proposals": {
+      "schema": "proposal",
+      "description": "Coleção de propostas de favor"
+    }
+  }
+}
